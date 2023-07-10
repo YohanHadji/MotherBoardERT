@@ -104,27 +104,20 @@ void loop() {
 
   if (rotator.isUpdated()) {
     rotator.setMode(rotator.computeMode());
-    switch (rotator.getMode()) {
-      case STATIONARY:
-      break;
-      case TRACKING_BINOCULAR:
-      case TRACKING_TELEMETRY:
-        rotatorCommand cmdToSend;
-        cmdToSend = rotator.computeCommand();
-        PacketTrackerCmd packetToSend;
-        packetToSend.azm = cmdToSend.azm;
-        packetToSend.elv = cmdToSend.elv;
-        packetToSend.mode = rotator.getMode();
+    rotatorCommand cmdToSend;
+    cmdToSend = rotator.computeCommand();
+    PacketTrackerCmd packetToSend;
+    packetToSend.azm = cmdToSend.azm;
+    packetToSend.elv = cmdToSend.elv;
+    packetToSend.mode = rotator.getMode();
 
-        byte* buffer = new byte[packetTrackerCmdSize]; // Allocate memory for the byte array
-        memcpy(buffer, &packetToSend, packetTrackerCmdSize); // Copy the struct to the byte array
+    byte* buffer = new byte[packetTrackerCmdSize]; // Allocate memory for the byte array
+    memcpy(buffer, &packetToSend, packetTrackerCmdSize); // Copy the struct to the byte array
 
-        uint8_t* bytesToSend = Rotator.encode(CAPSULE_ID::TRACKER_CMD,buffer,packetTrackerCmdSize);
-        ROTATOR_PORT.write(bytesToSend,Rotator.getCodedLen(packetTrackerCmdSize));
-        delete[] bytesToSend;
-        delete[] buffer;
-      break;
-    }
+    uint8_t* bytesToSend = Rotator.encode(CAPSULE_ID::TRACKER_CMD,buffer,packetTrackerCmdSize);
+    ROTATOR_PORT.write(bytesToSend,Rotator.getCodedLen(packetTrackerCmdSize));
+    delete[] bytesToSend;
+    delete[] buffer;
   }
 }
 
