@@ -114,13 +114,7 @@ void loop() {
         PacketTrackerCmd packetToSend;
         packetToSend.azm = cmdToSend.azm;
         packetToSend.elv = cmdToSend.elv;
-
-        if (rotator.getMode() == TRACKING_BINOCULAR) {
-          packetToSend.rate = 20;
-        }
-        else {
-          packetToSend.rate = AV_TELEMETRY_NOMINAL_RATE;
-        }
+        packetToSend.mode = rotator.getMode();
 
         byte* buffer = new byte[packetTrackerCmdSize]; // Allocate memory for the byte array
         memcpy(buffer, &packetToSend, packetTrackerCmdSize); // Copy the struct to the byte array
