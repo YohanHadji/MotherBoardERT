@@ -2,7 +2,7 @@
 #include <Capsule.h>  
 #include <Adafruit_NeoPixel.h>
 #include "../ERT_RF_Protocol_Interface/PacketDefinition.h"
-#include "rotatorControl.h"
+#include "rotator.h"
 
 #define CMD_MANUAL_MODE false
 
@@ -43,7 +43,7 @@ CapsuleStatic Binoculars(handleBinoculars);
 
 static bool positionIsUpdated = false;
 
-static PacketAV_downlink lastPacket;
+static rotClass rotator;
 
 uint32_t colors[] = {
     0x000000,
@@ -104,27 +104,36 @@ void loop() {
     Ui.decode(UI_PORT.read());
   } 
 
-  if (positionIsUpdated) {
-    // positionIsUpdated = false;
-    // double payerneLat = 46.8130919;
-    // double payerneLon = 6.9435166;
-    // double payerneAlt = 540.5;
-    // double currentLat = lastPacket.latitude;
-    // double currentLon = lastPacket.longitude;
-    // double currentAlt = lastPacket.altitude;
-    // rotatorCommand newCmd;
-    // newCmd = computeRotatorCommand(payerneLat, payerneLon, payerneAlt, currentLat, currentLon, currentAlt);
-    // String newOutput;
-    // newOutput = "";
-    // newOutput += "AZ";
-    // newOutput += String(newCmd.azm);
-    // newOutput += " EL";
-    // newOutput += String(newCmd.elv);
-    // ROTATOR_PORT.println(newOutput);
-  }
-}
+  if (rotator.isUpdated()) {
+    rotator.setMode(rotator.computeMode());
+    switch (rotator.getMode()) {
+      case STATIONARY:
+      break;
+      case TRACKING_BINOCULAR:
+      case TRACKING_TELEMETRY:
+        rotatorCommand cmdToSend;
+        cmdToSend = rotator.computeCommand();
+        PacketTrackerCmd packetToSend;
+        packetToSend.azm = cmdToSend.azm;
+        packetToSend.elv = cmdToSend.elv;
 
-void handleRF_AV_UP(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
+        if (rotator.getMode() == TRACKING_BINOCULAR) {
+          packetToSend.rate = 20;
+        }
+        else {
+          packetToSend.rate = AV_TELEMETRY_NOMINAL_RATE;
+        }
+
+        byte* buffer = new byte[packetTrackerCmdSize]; // Allocate memory for the byte array
+        memcpy(buffer, &packetToSend, packetTrackerCmdSize); // Copy the struct to the byte array
+
+        uint8_t* bytesToSend = Rotator.encode(CAPSULE_ID::TRACKER_CMD,buffer,packetTrackerCmdSize);
+        ROTATOR_PORT.write(bytesToSend,Rotator.getCodedLen(packetTrackerCmdSize));
+        delete[] bytesToSend;
+        delete[] buffer;
+      break;
+    }
+  }
 }
 
 void handleRF_AV_DOWN(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
@@ -136,7 +145,9 @@ void handleRF_AV_DOWN(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
       ledB.fill(ledColor);
       ledB.show();
 
+      PacketAV_downlink lastPacket;
       memcpy(&lastPacket, dataIn, packetAV_downlink_size);
+      rotator.updateAV(lastPacket);
 
       uint8_t* packetToSend = Ui.encode(packetId,dataIn,len);
       UI_PORT.write(packetToSend,Ui.getCodedLen(len));
@@ -151,28 +162,73 @@ void handleRF_AV_DOWN(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
 }
 
 void handleRF_GSE(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
-  uint8_t* packetToSend = Ui.encode(packetId,dataIn,len);
-  UI_PORT.write(packetToSend,Ui.getCodedLen(len));
-  delete[] packetToSend;
+  switch(packetId) {
+    case CAPSULE_ID::GSE_TELEMETRY:
+    {
+      uint8_t* packetToSend = Ui.encode(packetId,dataIn,len);
+      UI_PORT.write(packetToSend,Ui.getCodedLen(len));
+      delete[] packetToSend;
+    }
+    break;
+    default:
+    break;
+  }
 }
 
 void handleUi(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
-  if (packetId>CAPSULE_ID::BEGIN_AV_UP_ID & packetId<CAPSULE_ID::END_AV_UP_ID) {
+  if (packetId>CAPSULE_ID::BEGIN_AV_UP_ID and packetId<CAPSULE_ID::END_AV_UP_ID) {
     uint8_t* packetToSend = RF_AV_UP.encode(packetId,dataIn,len);
     RF_AV_UP_PORT.write(packetToSend,RF_AV_UP.getCodedLen(len));
     delete[] packetToSend;
   }
-  else if (packetId>CAPSULE_ID::BEGIN_GSE_UP_ID & packetId<CAPSULE_ID::END_GSE_UP_ID) {
+  else if (packetId>CAPSULE_ID::BEGIN_GSE_UP_ID and packetId<CAPSULE_ID::END_GSE_UP_ID) {
     uint8_t* packetToSend = RF_GSE.encode(packetId,dataIn,len);
     RF_GSE_PORT.write(packetToSend,RF_GSE.getCodedLen(len));
     delete[] packetToSend;
   }
+  switch (packetId) {
+    case CAPSULE_ID::CALIBRATE_TELEMETRY:
+      rotator.calibrateTelemetry();
+    break;
+    default:
+    break;
+  }
 }
+
+void handleBinoculars(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
+  switch(packetId) {
+    case CAPSULE_ID::BINOC_ATTITUDE:
+      PacketBinocAttitude binocAttitude;
+      memcpy(&binocAttitude, dataIn, packetBinocAttitudeSize);
+      rotator.updateBinocAttitude(binocAttitude);
+    break;
+    case CAPSULE_ID::BINOC_POSITION:
+      PacketBinocPosition binocPosition;
+      memcpy(&binocPosition, dataIn, packetBinocPositionSize);
+      rotator.updateBinocPosition(binocPosition);
+    break;
+    case CAPSULE_ID::BINOC_STATUS:
+      PacketBinocStatus binocStatus;
+      memcpy(&binocStatus, dataIn, packetBinocStatusSize);
+      rotator.updateBinocStatus(binocStatus);
+    break;
+    case CAPSULE_ID::BINOC_GLOBAL_STATUS:
+      PacketBinocGlobalStatus binocGlobalStatus;
+      memcpy(&binocGlobalStatus, dataIn, packetBinocGlobalStatusSize);
+      rotator.updateBinocGlobalStatus(binocGlobalStatus);
+    break;
+    default:
+    break;
+  }
+}
+
+// These two little guys don't have anything to handle because the rotator and av up 
+// are not sending anything back to the motherboard 
 
 void handleRotator(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
 
 }
 
-void handleBinoculars(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
+void handleRF_AV_UP(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
 
 }
