@@ -4,8 +4,6 @@
 #include "../ERT_RF_Protocol_Interface/PacketDefinition.h"
 #include "rotator.h"
 
-#define CMD_MANUAL_MODE false
-
 #define UI_PORT Serial
 #define UI_BAUD 115200
 
