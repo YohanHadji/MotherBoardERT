@@ -149,33 +149,31 @@ void handleRF_AV_DOWNLINK(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
 }
 
 void handleRF_GSE_DOWNLINK(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
-  switch(packetId) {
-    case CAPSULE_ID::GSE_TELEMETRY:
-    {
-      uint8_t* packetToSend = Ui.encode(packetId,dataIn,len);
-      UI_PORT.write(packetToSend,Ui.getCodedLen(len));
-      delete[] packetToSend;
-    }
-    break;
-    default:
-    break;
-  }
+  // switch(packetId) {
+  //   case CAPSULE_ID::GSE_TELEMETRY:
+  //   {
+  //     uint8_t* packetToSend = Ui.encode(packetId,dataIn,len);
+  //     UI_PORT.write(packetToSend,Ui.getCodedLen(len));
+  //     delete[] packetToSend;
+  //   }
+  //   break;
+  //   default:
+  //   break;
+  // }
+  
+  uint8_t* packetToSend = Ui.encode(packetId,dataIn,len);
+  UI_PORT.write(packetToSend,Ui.getCodedLen(len));
+  delete[] packetToSend;
+
   uint32_t ledColor = colors[random(0,8)];
   ledA.fill(ledColor);
   ledA.show();
 }
 
 void handleUi(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
-  if (packetId>CAPSULE_ID::BEGIN_AV_UP_ID and packetId<CAPSULE_ID::END_AV_UP_ID) {
-    uint8_t* packetToSend = RF_UPLINK.encode(packetId,dataIn,len);
-    RF_UPLINK_PORT.write(packetToSend,RF_UPLINK.getCodedLen(len));
-    delete[] packetToSend;
-  }
-  else if (packetId>CAPSULE_ID::BEGIN_GSE_UP_ID and packetId<CAPSULE_ID::END_GSE_UP_ID) {
-    uint8_t* packetToSend = RF_GSE_DOWNLINK.encode(packetId,dataIn,len);
-    RF_GSE_DOWNLINK_PORT.write(packetToSend,RF_GSE_DOWNLINK.getCodedLen(len));
-    delete[] packetToSend;
-  }
+  uint8_t* packetToSend = RF_UPLINK.encode(packetId,dataIn,len);
+  RF_UPLINK_PORT.write(packetToSend,RF_UPLINK.getCodedLen(len));
+  delete[] packetToSend;
   switch (packetId) {
     case CAPSULE_ID::CALIBRATE_TELEMETRY:
       rotator.calibrateTelemetry();
