@@ -7,14 +7,14 @@
 #define UI_PORT Serial
 #define UI_BAUD 115200
 
-#define RF_AV_UP_PORT Serial8
-#define RF_AV_UP_BAUD 115200
+#define RF_UPLINK_PORT Serial8
+#define RF_UPLINK_BAUD 115200
 
-#define RF_AV_DOWN_PORT Serial7
-#define RF_AV_DOWN_BAUD 115200
+#define RF_AV_DOWNLINK_PORT Serial7
+#define RF_AV_DOWNLINK_BAUD 115200
 
-#define RF_GSE_PORT Serial6
-#define RF_GSE_BAUD 115200
+#define RF_GSE_DOWNLINK_PORT Serial6
+#define RF_GSE_DOWNLINK_BAUD 115200
 
 #define ROTATOR_PORT Serial1
 #define ROTATOR_BAUD 19200
@@ -22,9 +22,9 @@
 #define NEOPIXEL_A_PIN 33
 #define NEOPIXEL_B_PIN 32
 
-void handleRF_AV_UP(uint8_t packetId, uint8_t *dataIn, uint32_t len); 
-void handleRF_AV_DOWN(uint8_t packetId, uint8_t *dataIn, uint32_t len); 
-void handleRF_GSE(uint8_t packetId, uint8_t *dataIn, uint32_t len); 
+void handleRF_UPLINK(uint8_t packetId, uint8_t *dataIn, uint32_t len); 
+void handleRF_AV_DOWNLINK(uint8_t packetId, uint8_t *dataIn, uint32_t len); 
+void handleRF_GSE_DOWNLINK(uint8_t packetId, uint8_t *dataIn, uint32_t len); 
 void handleUi(uint8_t packetId, uint8_t *dataIn, uint32_t len);
 void handleRotator(uint8_t packetId, uint8_t *dataIn, uint32_t len);
 void handleBinoculars(uint8_t packetId, uint8_t *dataIn, uint32_t len);
@@ -32,9 +32,9 @@ void handleBinoculars(uint8_t packetId, uint8_t *dataIn, uint32_t len);
 Adafruit_NeoPixel ledA(1, NEOPIXEL_A_PIN, NEO_GRB + NEO_KHZ800); // 1 led
 Adafruit_NeoPixel ledB(1, NEOPIXEL_B_PIN, NEO_GRB + NEO_KHZ800); // 1 led
 
-CapsuleStatic RF_AV_UP(handleRF_AV_UP);
-CapsuleStatic RF_AV_DOWN(handleRF_AV_DOWN);
-CapsuleStatic RF_GSE(handleRF_GSE);
+CapsuleStatic RF_UPLINK(handleRF_UPLINK);
+CapsuleStatic RF_AV_DOWNLINK(handleRF_AV_DOWNLINK);
+CapsuleStatic RF_GSE_DOWNLINK(handleRF_GSE_DOWNLINK);
 CapsuleStatic Ui(handleUi);
 CapsuleStatic Rotator(handleRotator);
 CapsuleStatic Binoculars(handleBinoculars);
@@ -57,8 +57,9 @@ uint32_t colors[] = {
 void setup() {
   pinMode(LED_BUILTIN,OUTPUT);
   // put your setup code here, to run once:
-  RF_AV_UP_PORT.begin(RF_AV_UP_BAUD);
-  RF_AV_DOWN_PORT.begin(RF_AV_DOWN_BAUD);
+  RF_UPLINK_PORT.begin(RF_UPLINK_BAUD);
+  RF_AV_DOWNLINK_PORT.begin(RF_AV_DOWNLINK_BAUD);
+  RF_GSE_DOWNLINK_PORT.begin(RF_GSE_DOWNLINK_BAUD);
 
   UI_PORT.begin(115200);
   ROTATOR_PORT.begin(ROTATOR_BAUD);
@@ -70,7 +71,6 @@ void setup() {
     uint32_t ledColor = colors[random(0,8)];
     ledA.fill(ledColor);
     ledA.show();
-    ledA.show();
   }
 
   { 
@@ -79,23 +79,22 @@ void setup() {
     uint32_t ledColor = colors[random(0,8)];
     ledB.fill(ledColor);
     ledB.show();
-    ledB.show();
   }
 
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-  while (RF_AV_UP_PORT.available()) {
-    RF_AV_UP.decode(RF_AV_UP_PORT.read());
+  while (RF_UPLINK_PORT.available()) {
+    RF_UPLINK.decode(RF_UPLINK_PORT.read());
   }
 
-  while (RF_AV_DOWN_PORT.available()) {
-    RF_AV_DOWN.decode(RF_AV_DOWN_PORT.read());
+  while (RF_AV_DOWNLINK_PORT.available()) {
+    RF_AV_DOWNLINK.decode(RF_AV_DOWNLINK_PORT.read());
   }
 
-  while (RF_GSE_PORT.available()) {
-    RF_GSE.decode(RF_GSE_PORT.read());
+  while (RF_GSE_DOWNLINK_PORT.available()) {
+    RF_GSE_DOWNLINK.decode(RF_GSE_DOWNLINK_PORT.read());
   }
 
   while (UI_PORT.available()) {
@@ -121,7 +120,7 @@ void loop() {
   }
 }
 
-void handleRF_AV_DOWN(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
+void handleRF_AV_DOWNLINK(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
   switch (packetId) {
     case CAPSULE_ID::AV_TELEMETRY:
     {
@@ -144,9 +143,12 @@ void handleRF_AV_DOWN(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
     default:
     break;
   }
+  uint32_t ledColor = colors[random(0,8)];
+  ledA.fill(ledColor);
+  ledA.show();
 }
 
-void handleRF_GSE(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
+void handleRF_GSE_DOWNLINK(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
   switch(packetId) {
     case CAPSULE_ID::GSE_TELEMETRY:
     {
@@ -158,17 +160,20 @@ void handleRF_GSE(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
     default:
     break;
   }
+  uint32_t ledColor = colors[random(0,8)];
+  ledA.fill(ledColor);
+  ledA.show();
 }
 
 void handleUi(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
   if (packetId>CAPSULE_ID::BEGIN_AV_UP_ID and packetId<CAPSULE_ID::END_AV_UP_ID) {
-    uint8_t* packetToSend = RF_AV_UP.encode(packetId,dataIn,len);
-    RF_AV_UP_PORT.write(packetToSend,RF_AV_UP.getCodedLen(len));
+    uint8_t* packetToSend = RF_UPLINK.encode(packetId,dataIn,len);
+    RF_UPLINK_PORT.write(packetToSend,RF_UPLINK.getCodedLen(len));
     delete[] packetToSend;
   }
   else if (packetId>CAPSULE_ID::BEGIN_GSE_UP_ID and packetId<CAPSULE_ID::END_GSE_UP_ID) {
-    uint8_t* packetToSend = RF_GSE.encode(packetId,dataIn,len);
-    RF_GSE_PORT.write(packetToSend,RF_GSE.getCodedLen(len));
+    uint8_t* packetToSend = RF_GSE_DOWNLINK.encode(packetId,dataIn,len);
+    RF_GSE_DOWNLINK_PORT.write(packetToSend,RF_GSE_DOWNLINK.getCodedLen(len));
     delete[] packetToSend;
   }
   switch (packetId) {
@@ -178,6 +183,9 @@ void handleUi(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
     default:
     break;
   }
+  uint32_t ledColor = colors[random(0,8)];
+  ledB.fill(ledColor);
+  ledB.show();
 }
 
 void handleBinoculars(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
@@ -214,6 +222,6 @@ void handleRotator(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
 
 }
 
-void handleRF_AV_UP(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
+void handleRF_UPLINK(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
 
 }
