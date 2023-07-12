@@ -19,6 +19,9 @@
 #define ROTATOR_PORT Serial8
 #define ROTATOR_BAUD 19200
 
+#define BINOCULARS_PORT Serial7
+#define BINOCULARS_BAUD 115200
+
 #define NEOPIXEL_A_PIN 33
 #define NEOPIXEL_B_PIN 32
 
@@ -63,6 +66,7 @@ void setup() {
 
   UI_PORT.begin(115200);
   ROTATOR_PORT.begin(ROTATOR_BAUD);
+  BINOCULARS_PORT.begin(BINOCULARS_BAUD);
   // UI_PORT.println("Starting...");
 
   { 
@@ -93,6 +97,10 @@ void loop() {
     RF_GSE_DOWNLINK.decode(RF_GSE_DOWNLINK_PORT.read());
   }
 
+  while (BINOCULARS_PORT.available()) {
+    Binoculars.decode(BINOCULARS_PORT.read());
+  }
+
   while (UI_PORT.available()) {
     Ui.decode(UI_PORT.read());
   } 
@@ -104,6 +112,7 @@ void loop() {
     PacketTrackerCmd packetToSend;
     packetToSend.azm = cmdToSend.azm;
     packetToSend.elv = cmdToSend.elv;
+
     packetToSend.mode = rotator.getMode();
 
     byte* buffer = new byte[packetTrackerCmdSize]; // Allocate memory for the byte array
