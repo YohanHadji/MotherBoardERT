@@ -44,7 +44,6 @@ static bool positionIsUpdated = false;
 static rotClass rotator;
 
 uint32_t colors[] = {
-    0x000000,
     0x32A8A0,
     0x0000FF,
     0xFFEA00,
@@ -68,7 +67,7 @@ void setup() {
   { 
     ledA.begin();
     ledA.setBrightness(50);
-    uint32_t ledColor = colors[random(0,8)];
+    uint32_t ledColor = colors[random(0,7)];
     ledA.fill(ledColor);
     ledA.show();
   }
@@ -76,7 +75,7 @@ void setup() {
   { 
     ledB.begin();
     ledB.setBrightness(50);
-    uint32_t ledColor = colors[random(0,8)];
+    uint32_t ledColor = colors[random(0,7)];
     ledB.fill(ledColor);
     ledB.show();
   }
@@ -143,7 +142,7 @@ void handleRF_AV_DOWNLINK(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
     default:
     break;
   }
-  uint32_t ledColor = colors[random(0,8)];
+  uint32_t ledColor = colors[random(0,7)];
   ledA.fill(ledColor);
   ledA.show();
 }
@@ -165,7 +164,7 @@ void handleRF_GSE_DOWNLINK(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
   UI_PORT.write(packetToSend,Ui.getCodedLen(len));
   delete[] packetToSend;
 
-  uint32_t ledColor = colors[random(0,8)];
+  uint32_t ledColor = colors[random(0,7)];
   ledA.fill(ledColor);
   ledA.show();
 }
@@ -181,7 +180,7 @@ void handleUi(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
     default:
     break;
   }
-  uint32_t ledColor = colors[random(0,8)];
+  uint32_t ledColor = colors[random(0,7)];
   ledB.fill(ledColor);
   ledB.show();
 }
