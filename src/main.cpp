@@ -7,16 +7,16 @@
 #define UI_PORT Serial
 #define UI_BAUD 115200
 
-#define RF_UPLINK_PORT Serial8
+#define RF_UPLINK_PORT Serial1
 #define RF_UPLINK_BAUD 115200
 
-#define RF_AV_DOWNLINK_PORT Serial7
+#define RF_AV_DOWNLINK_PORT Serial2
 #define RF_AV_DOWNLINK_BAUD 115200
 
-#define RF_GSE_DOWNLINK_PORT Serial6
+#define RF_GSE_DOWNLINK_PORT Serial3
 #define RF_GSE_DOWNLINK_BAUD 115200
 
-#define ROTATOR_PORT Serial1
+#define ROTATOR_PORT Serial8
 #define ROTATOR_BAUD 19200
 
 #define NEOPIXEL_A_PIN 33
@@ -44,14 +44,15 @@ static bool positionIsUpdated = false;
 static rotClass rotator;
 
 uint32_t colors[] = {
-    0x32A8A0,
-    0x0000FF,
-    0xFFEA00,
-    0x00FF00,
-    0xFF0000,
-    0xCF067C,
-    0xFF0800
+    0x32A8A0, // Cyan
+    0x0000FF, // Blue
+    0xFFEA00, // Yellow
+    0x00FF00, // Green
+    0xFF0000, // Red
+    0xCF067C, // Purple
+    0xFF0800  // Orange
 }; 
+
 
 void setup() {
   pinMode(LED_BUILTIN,OUTPUT);
@@ -66,17 +67,13 @@ void setup() {
 
   { 
     ledA.begin();
-    ledA.setBrightness(50);
-    uint32_t ledColor = colors[random(0,7)];
-    ledA.fill(ledColor);
+    ledA.fill(0x00FF00);
     ledA.show();
   }
 
   { 
     ledB.begin();
-    ledB.setBrightness(50);
-    uint32_t ledColor = colors[random(0,7)];
-    ledB.fill(ledColor);
+    ledB.fill(0x00FF00);
     ledB.show();
   }
 
