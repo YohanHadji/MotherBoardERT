@@ -9,10 +9,10 @@ bool rotClass::isUpdated() {
         case STATIONARY:
             return true;
         break;
-        case TRACKING_BINOCULAR:
+        case TRACKING_FAST:
             if (binocAttitudeIsUpdated) {
-            binocAttitudeIsUpdated = false;
-            return true;
+                binocAttitudeIsUpdated = false;
+                return true;
             }
             if (binocPositionIsUpdated) {
                 binocPositionIsUpdated = false;
@@ -27,7 +27,7 @@ bool rotClass::isUpdated() {
                 return true;
             }
         break;
-        case TRACKING_TELEMETRY:
+        case TRACKING_SLOW:
             if (rocketPositionIsUpdated) {
                 rocketPositionIsUpdated = false;
                 return true;
@@ -40,31 +40,50 @@ bool rotClass::isUpdated() {
 void rotClass::updateAV(PacketAV_downlink avStatus) {
     av = avStatus;
     rocketPositionIsUpdated = true;
+    lastAVData = millis();
 };
 
 void rotClass::updateBinocAttitude(PacketBinocAttitude binocAttitude) {
     binoc.attitude = binocAttitude;
     binocAttitudeIsUpdated = true;
+    lastBinocData = millis();
 };
 
 void rotClass::updateBinocPosition(PacketBinocPosition binocPosition) {
     binoc.position = binocPosition;
     binocPositionIsUpdated = true;
+    lastBinocData = millis();
 };
 
 void rotClass::updateBinocStatus(PacketBinocStatus binocStatus) {
     binoc.status = binocStatus;
     binocStatusIsUpdated = true;
+    lastBinocData = millis();
 };
 
 void rotClass::updateBinocGlobalStatus(PacketBinocGlobalStatus binocStatus) {
     binoc = binocStatus;
     binocGlobalStatusIsUpdated = true;
+    lastBinocData = millis();
 };
 
-rotatorCommand rotClass::getCommand() {
-    return command;
-};
+bool rotClass::AVIsActive() {
+    if (millis() - lastAVData > 2*(1000/NOMINAL_AV_RATE)) {
+        return false;
+    }
+    else {
+        return true;
+    }
+}
+
+bool rotClass::binocIsActive() {
+    if (millis() - lastBinocData > 2*(1000/NOMINAL_BINOC_RATE)) {
+        return false;
+    }
+    else {
+        return true;
+    }
+}
 
 TRACKING_MODE rotClass::getMode() {
     return mode;
@@ -82,27 +101,28 @@ rotatorCommand rotClass::computeCommand() {
             commandOut.azm = 0;
             commandOut.elv = 0;
         break;
-        case TRACKING_BINOCULAR:
+        case TRACKING_FAST:
             commandOut.azm = binoc.attitude.azm;
             commandOut.elv = binoc.attitude.elv;
         break;
-        case TRACKING_TELEMETRY:
+        case TRACKING_SLOW:
             rotatorCommand avRaw;
             avRaw = computeAngle(binoc.position.lat, binoc.position.lon, binoc.position.alt, av.gnss_lat, av.gnss_lon, av.gnss_alt);
             commandOut.azm = avRaw.azm - tlmOffset.azm;
             commandOut.elv = avRaw.elv - tlmOffset.elv;
         break;
     } 
+    commandOut.mode = mode;
     return commandOut;
 };
 
 TRACKING_MODE rotClass::computeMode() {
     binoc.status.isInView = true;
     if (binoc.status.isInView and binoc.status.isCalibrated) {
-        return TRACKING_BINOCULAR;
+        return TRACKING_FAST;
     } 
     else if (telemetryCalibrated) {
-        return TRACKING_TELEMETRY;
+        return TRACKING_SLOW;
     }
     else {
         return STATIONARY;

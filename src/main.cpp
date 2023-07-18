@@ -3,27 +3,7 @@
 #include <Adafruit_NeoPixel.h>
 #include "../ERT_RF_Protocol_Interface/PacketDefinition.h"
 #include "rotator.h"
-
-#define UI_PORT Serial
-#define UI_BAUD 115200
-
-#define RF_UPLINK_PORT Serial1
-#define RF_UPLINK_BAUD 115200
-
-#define RF_AV_DOWNLINK_PORT Serial2
-#define RF_AV_DOWNLINK_BAUD 115200
-
-#define RF_GSE_DOWNLINK_PORT Serial3
-#define RF_GSE_DOWNLINK_BAUD 115200
-
-#define ROTATOR_PORT Serial8
-#define ROTATOR_BAUD 115200
-
-#define BINOCULARS_PORT Serial7
-#define BINOCULARS_BAUD 115200
-
-#define NEOPIXEL_A_PIN 33
-#define NEOPIXEL_B_PIN 32
+#include "config.h"
 
 void handleRF_UPLINK(uint8_t packetId, uint8_t *dataIn, uint32_t len); 
 void handleRF_AV_DOWNLINK(uint8_t packetId, uint8_t *dataIn, uint32_t len); 
@@ -31,6 +11,8 @@ void handleRF_GSE_DOWNLINK(uint8_t packetId, uint8_t *dataIn, uint32_t len);
 void handleUi(uint8_t packetId, uint8_t *dataIn, uint32_t len);
 void handleRotator(uint8_t packetId, uint8_t *dataIn, uint32_t len);
 void handleBinoculars(uint8_t packetId, uint8_t *dataIn, uint32_t len);
+
+void sendRotatorCmd(rotatorCommand cmd);
 
 Adafruit_NeoPixel ledA(1, NEOPIXEL_A_PIN, NEO_GRB + NEO_KHZ800); // 1 led
 Adafruit_NeoPixel ledB(1, NEOPIXEL_B_PIN, NEO_GRB + NEO_KHZ800); // 1 led
@@ -107,27 +89,26 @@ void loop() {
 
   if (rotator.isUpdated()) {
     rotator.setMode(rotator.computeMode());
-    rotatorCommand cmdToSend;
-    cmdToSend = rotator.computeCommand();
-    PacketTrackerCmd packetToSend;
-    packetToSend.azm = cmdToSend.azm;
-    packetToSend.elv = cmdToSend.elv;
-
-    Serial.print("Azimuth : ");
-    Serial.print(packetToSend.azm);
-    Serial.print(" Elevation : ");
-    Serial.println(packetToSend.elv);
-
-    packetToSend.mode = rotator.getMode();
-
-    byte* buffer = new byte[packetTrackerCmdSize]; // Allocate memory for the byte array
-    memcpy(buffer, &packetToSend, packetTrackerCmdSize); // Copy the struct to the byte array
-
-    uint8_t* bytesToSend = Rotator.encode(CAPSULE_ID::TRACKER_CMD,buffer,packetTrackerCmdSize);
-    ROTATOR_PORT.write(bytesToSend,Rotator.getCodedLen(packetTrackerCmdSize));
-    delete[] bytesToSend;
-    delete[] buffer;
+    //static rotatorCommand lastComputedCommand;
+    rotatorCommand computedCommand = rotator.computeCommand();
+    sendRotatorCmd(computedCommand);
   }
+}
+
+void sendRotatorCmd(rotatorCommand cmdToSend) {
+  cmdToSend = rotator.computeCommand();
+  PacketTrackerCmd packetToSend;
+  packetToSend.azm = cmdToSend.azm;
+  packetToSend.elv = cmdToSend.elv;
+  packetToSend.mode = cmdToSend.mode;
+
+  byte* buffer = new byte[packetTrackerCmdSize]; // Allocate memory for the byte array
+  memcpy(buffer, &packetToSend, packetTrackerCmdSize); // Copy the struct to the byte array
+
+  uint8_t* bytesToSend = Rotator.encode(CAPSULE_ID::TRACKER_CMD,buffer,packetTrackerCmdSize);
+  ROTATOR_PORT.write(bytesToSend,Rotator.getCodedLen(packetTrackerCmdSize));
+  delete[] bytesToSend;
+  delete[] buffer;
 }
 
 void handleRF_AV_DOWNLINK(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
@@ -199,26 +180,34 @@ void handleUi(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
 void handleBinoculars(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
   switch(packetId) {
     case CAPSULE_ID::BINOC_ATTITUDE:
+    {
       PacketBinocAttitude binocAttitude;
       memcpy(&binocAttitude, dataIn, packetBinocAttitudeSize);
       rotator.updateBinocAttitude(binocAttitude);
+    }
     break;
     case CAPSULE_ID::BINOC_POSITION:
+    {
       PacketBinocPosition binocPosition;
       memcpy(&binocPosition, dataIn, packetBinocPositionSize);
       rotator.updateBinocPosition(binocPosition);
+    }
     break;
     case CAPSULE_ID::BINOC_STATUS:
+    {
       PacketBinocStatus binocStatus;
       memcpy(&binocStatus, dataIn, packetBinocStatusSize);
       rotator.updateBinocStatus(binocStatus);
+    }
     break;
     case CAPSULE_ID::BINOC_GLOBAL_STATUS:
+    {
       PacketBinocGlobalStatus binocGlobalStatus;
       memcpy(&binocGlobalStatus, dataIn, packetBinocGlobalStatusSize);
       rotator.updateBinocGlobalStatus(binocGlobalStatus);
+    }
     break;
-    case CAPSULE_ID:
+
     default:
     break;
   }
