@@ -1,15 +1,17 @@
 #include <Arduino.h>
 #include "../ERT_RF_Protocol_Interface/PacketDefinition.h"
+#include "config.h"
 
 enum TRACKING_MODE {
     STATIONARY,
-    TRACKING_BINOCULAR,
-    TRACKING_TELEMETRY
+    TRACKING_FAST,
+    TRACKING_SLOW
 };
 
 struct rotatorCommand {
     float azm;
     float elv;
+    TRACKING_MODE mode;
 };
 
 double azimuthTo(double lat1, double lng1, double lat2, double lng2);
@@ -26,12 +28,13 @@ class rotClass {
     void updateBinocGlobalStatus(PacketBinocGlobalStatus binocStatus);
     void updateAV(PacketAV_downlink avStatus);
     bool isUpdated();
+    bool AVIsActive();
+    bool binocIsActive();
     void calibrateTelemetry();
     int  getTrackingRate();
     void setMode(TRACKING_MODE mode);
     TRACKING_MODE computeMode();
     TRACKING_MODE getMode();
-    rotatorCommand getCommand();
     rotatorCommand computeCommand();
   private:
     TRACKING_MODE mode;
@@ -46,4 +49,7 @@ class rotClass {
     bool telemetryCalibrated;
     rotatorCommand tlmOffset;
     int trackingRate;
+
+    long lastAVData;
+    long lastBinocData;
 };
