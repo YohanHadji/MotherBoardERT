@@ -97,6 +97,7 @@ rotatorCommand rotClass::computeCommand() {
 };
 
 TRACKING_MODE rotClass::computeMode() {
+    binoc.status.isInView = true;
     if (binoc.status.isInView and binoc.status.isCalibrated) {
         return TRACKING_BINOCULAR;
     } 

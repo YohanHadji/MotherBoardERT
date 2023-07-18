@@ -17,7 +17,7 @@
 #define RF_GSE_DOWNLINK_BAUD 115200
 
 #define ROTATOR_PORT Serial8
-#define ROTATOR_BAUD 19200
+#define ROTATOR_BAUD 115200
 
 #define BINOCULARS_PORT Serial7
 #define BINOCULARS_BAUD 115200
@@ -112,6 +112,11 @@ void loop() {
     PacketTrackerCmd packetToSend;
     packetToSend.azm = cmdToSend.azm;
     packetToSend.elv = cmdToSend.elv;
+
+    Serial.print("Azimuth : ");
+    Serial.print(packetToSend.azm);
+    Serial.print(" Elevation : ");
+    Serial.println(packetToSend.elv);
 
     packetToSend.mode = rotator.getMode();
 
@@ -213,6 +218,7 @@ void handleBinoculars(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
       memcpy(&binocGlobalStatus, dataIn, packetBinocGlobalStatusSize);
       rotator.updateBinocGlobalStatus(binocGlobalStatus);
     break;
+    case CAPSULE_ID:
     default:
     break;
   }
