@@ -89,14 +89,18 @@ void loop() {
 
   if (rotator.isUpdated()) {
     rotator.setMode(rotator.computeMode());
-    //static rotatorCommand lastComputedCommand;
+
+    static rotatorCommand lastComputedCommand;
     rotatorCommand computedCommand = rotator.computeCommand();
-    sendRotatorCmd(computedCommand);
+
+    if ((lastComputedCommand.azm != computedCommand.azm) or (lastComputedCommand.elv != computedCommand.elv) or (lastComputedCommand.mode != computedCommand.mode)) {
+      sendRotatorCmd(computedCommand);
+      lastComputedCommand = computedCommand;
+    }
   }
 }
 
 void sendRotatorCmd(rotatorCommand cmdToSend) {
-  cmdToSend = rotator.computeCommand();
   PacketTrackerCmd packetToSend;
   packetToSend.azm = cmdToSend.azm;
   packetToSend.elv = cmdToSend.elv;
