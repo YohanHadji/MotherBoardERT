@@ -11,6 +11,7 @@ void handleRF_GSE_DOWNLINK(uint8_t packetId, uint8_t *dataIn, uint32_t len);
 void handleUi(uint8_t packetId, uint8_t *dataIn, uint32_t len);
 void handleRotator(uint8_t packetId, uint8_t *dataIn, uint32_t len);
 void handleBinoculars(uint8_t packetId, uint8_t *dataIn, uint32_t len);
+void handleCommandInput(uint8_t packetId, uint8_t *dataIn, uint32_t len);
 
 void sendRotatorCmd(rotatorCommand cmd);
 
@@ -23,6 +24,7 @@ CapsuleStatic RF_GSE_DOWNLINK(handleRF_GSE_DOWNLINK);
 CapsuleStatic Ui(handleUi);
 CapsuleStatic Rotator(handleRotator);
 CapsuleStatic Binoculars(handleBinoculars);
+CapsuleStatic CommandInput(handleCommandInput);
 
 static bool positionIsUpdated = false;
 
@@ -49,7 +51,7 @@ void setup() {
   UI_PORT.begin(115200);
   ROTATOR_PORT.begin(ROTATOR_BAUD);
   BINOCULARS_PORT.begin(BINOCULARS_BAUD);
-  // UI_PORT.println("Starting...");
+  COMMAND_INPUT_PORT.begin(COMMAND_INPUT_BAUD);
 
   { 
     ledA.begin();
@@ -81,6 +83,10 @@ void loop() {
 
   while (BINOCULARS_PORT.available()) {
     Binoculars.decode(BINOCULARS_PORT.read());
+  }
+
+  while (COMMAND_INPUT_PORT.available()) {
+    CommandInput.decode(COMMAND_INPUT_PORT.read());
   }
 
   while (UI_PORT.available()) {
@@ -182,6 +188,43 @@ void handleUi(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
 }
 
 void handleBinoculars(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
+  switch(packetId) {
+    case CAPSULE_ID::BINOC_ATTITUDE:
+    {
+      PacketBinocAttitude binocAttitude;
+      memcpy(&binocAttitude, dataIn, packetBinocAttitudeSize);
+      rotator.updateBinocAttitude(binocAttitude);
+    }
+    break;
+    case CAPSULE_ID::BINOC_POSITION:
+    {
+      PacketBinocPosition binocPosition;
+      memcpy(&binocPosition, dataIn, packetBinocPositionSize);
+      rotator.updateBinocPosition(binocPosition);
+    }
+    break;
+    case CAPSULE_ID::BINOC_STATUS:
+    {
+      PacketBinocStatus binocStatus;
+      memcpy(&binocStatus, dataIn, packetBinocStatusSize);
+      rotator.updateBinocStatus(binocStatus);
+    }
+    break;
+    case CAPSULE_ID::BINOC_GLOBAL_STATUS:
+    {
+      PacketBinocGlobalStatus binocGlobalStatus;
+      memcpy(&binocGlobalStatus, dataIn, packetBinocGlobalStatusSize);
+      rotator.updateBinocGlobalStatus(binocGlobalStatus);
+    }
+    break;
+
+    default:
+    break;
+  }
+}
+
+void handleCommandInput(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
+  //UI_PORT.println("Command received");
   switch(packetId) {
     case CAPSULE_ID::BINOC_ATTITUDE:
     {
