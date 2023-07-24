@@ -112,6 +112,11 @@ void sendRotatorCmd(rotatorCommand cmdToSend) {
   packetToSend.elv = cmdToSend.elv;
   packetToSend.mode = cmdToSend.mode;
 
+  UI_PORT.print("Sending command to rotator : ");
+  UI_PORT.print(packetToSend.azm);
+  UI_PORT.print(" ");
+  UI_PORT.println(packetToSend.elv);
+
   byte* buffer = new byte[packetTrackerCmdSize]; // Allocate memory for the byte array
   memcpy(buffer, &packetToSend, packetTrackerCmdSize); // Copy the struct to the byte array
 
