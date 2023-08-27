@@ -28,8 +28,6 @@ CapsuleStatic CameraRotator(handleCameraRotator);
 CapsuleStatic Binoculars(handleBinoculars);
 CapsuleStatic CommandInput(handleCommandInput);
 
-static bool positionIsUpdated = false;
-
 static rotClass rotator;
 
 uint32_t colors[] = {
@@ -193,8 +191,6 @@ void handleRF_AV_DOWNLINK(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
       uint8_t* packetToSend = Ui.encode(packetId,dataIn,len);
       // UI_PORT.write(packetToSend,Ui.getCodedLen(len));
       delete[] packetToSend;
-
-      positionIsUpdated = true;
     }
     break;
     default:

@@ -153,8 +153,6 @@ rotatorCommand rotClass::computeCommand() {
             // UI_PORT.print(", ");
             // UI_PORT.println(latFiltered*1000000);
 
-            PacketTrackerCmd newCmd;
-
             rotatorCommand positionRaw;
             rotatorCommand positionFiltered;
 
