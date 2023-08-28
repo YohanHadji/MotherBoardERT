@@ -2,7 +2,8 @@
 #include <Capsule.h>  
 #include <Adafruit_NeoPixel.h>
 #include "../ERT_RF_Protocol_Interface/PacketDefinition.h"
-#include "../TrackStation/rotator.h"
+#include <rotator.h>
+
 #include "config.h"
 
 void handleRF_UPLINK(uint8_t packetId, uint8_t *dataIn, uint32_t len); 
@@ -64,7 +65,14 @@ void setup() {
     ledB.fill(0x00FF00);
     ledB.show();
   }
+  
   rotator.begin();
+
+  position groundPosition;
+  groundPosition.lat = 45.185;
+  groundPosition.lon = 5.727;
+  groundPosition.alt = 200;
+  rotator.setGroundPosition(groundPosition);
 
 }
 
