@@ -2,7 +2,7 @@
 #include <Capsule.h>  
 #include <Adafruit_NeoPixel.h>
 #include "../ERT_RF_Protocol_Interface/PacketDefinition.h"
-#include "rotator.h"
+#include "../TrackStation/rotator.h"
 #include "config.h"
 
 void handleRF_UPLINK(uint8_t packetId, uint8_t *dataIn, uint32_t len); 
@@ -13,7 +13,6 @@ void handleAntennaRotator(uint8_t packetId, uint8_t *dataIn, uint32_t len);
 void handleCameraRotator(uint8_t packetId, uint8_t *dataIn, uint32_t len);
 void handleBinoculars(uint8_t packetId, uint8_t *dataIn, uint32_t len);
 void handleCommandInput(uint8_t packetId, uint8_t *dataIn, uint32_t len);
-
 void sendRotatorCmd(PacketTrackerCmd cmd);
 
 Adafruit_NeoPixel ledA(1, NEOPIXEL_A_PIN, NEO_GRB + NEO_KHZ800); // 1 led
