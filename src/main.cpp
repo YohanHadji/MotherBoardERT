@@ -108,6 +108,8 @@ void loop() {
     rotator.setMode(rotator.computeMode());
 
     if (rotator.getMode() != lastMode) {
+      // Serial.print("Rotator mode : ");
+      // Serial.println(rotator.getMode());
       if (lastMode == TARGET_MODE::TARGET_NONE and rotator.getMode() == TARGET_MODE::TARGET_POSITION) {
         position lastPosition = rotator.getPosition();
         rotator.latEstimator.reset(lastPosition.lat);
@@ -133,8 +135,8 @@ void loop() {
       switch (rotator.getMode()) {
         case TARGET_MODE::TARGET_NONE:
         case TARGET_MODE::TARGET_POINTER:
-          cmdToSend.timeStamp = millis();
-          cmdToSend.cutoffFreq = 20;
+          cmdToSend.timeStamp = 0;
+          cmdToSend.cutoffFreq = 5;
           cmdToSend.maxTimeWindow = (1000.0/20.0)*5.0;
         break;
         case TARGET_MODE::TARGET_POSITION:
@@ -196,6 +198,7 @@ void handleRF_AV_DOWNLINK(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
       rotator.altEstimator.update(lastPacket.gnss_alt,millis()-lastPacket.timestamp);
 
       uint8_t* packetToSend = Ui.encode(packetId,dataIn,len);
+      // TODO
       UI_PORT.write(packetToSend,Ui.getCodedLen(len));
       delete[] packetToSend;
     }
@@ -222,6 +225,7 @@ void handleRF_GSE_DOWNLINK(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
   // }
   
   uint8_t* packetToSend = Ui.encode(packetId,dataIn,len);
+  // TODO
   UI_PORT.write(packetToSend,Ui.getCodedLen(len));
   delete[] packetToSend;
 
@@ -252,6 +256,13 @@ void handleBinoculars(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
     {
       PacketBinocGlobalStatus binocGlobalStatus;
       memcpy(&binocGlobalStatus, dataIn, packetBinocGlobalStatusSize);
+
+      // UI_PORT.print("Azimuth: ");
+      // UI_PORT.print(binocGlobalStatus.attitude.azm);
+      // UI_PORT.print(" Elevation: ");
+      // UI_PORT.print(binocGlobalStatus.attitude.elv);
+      // UI_PORT.print(" sensorIsCalibrated: ");
+      // UI_PORT.println(binocGlobalStatus.status.isCalibrated);
 
       pointer lastBinocPointer;
       lastBinocPointer.azm = binocGlobalStatus.attitude.azm;
