@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include <Capsule.h>  
+#include <capsule.h>  
 #include <Adafruit_NeoPixel.h>
 #include "../ERT_RF_Protocol_Interface/PacketDefinition.h"
 #include <rotator.h>
@@ -324,8 +324,9 @@ void handleBinoculars(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
 }
 
 void handleCommandInput(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
-  //UI_PORT.println("Command received");
+  // UI_PORT.println("Command received");
   switch(packetId) {
+    // if arrived by WiFi 
     case CAPSULE_ID::BINOC_GLOBAL_STATUS:
     {
       memcpy(&binocGlobalStatus, dataIn, packetBinocGlobalStatusSize);
@@ -338,6 +339,13 @@ void handleCommandInput(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
       lastBinocPointer.isCalibrated = binocGlobalStatus.status.isCalibrated;
 
       rotator.updatePointer(lastBinocPointer);
+    }
+    break;
+    case CAPSULE_ID::GS_CMD:
+    {
+      uint8_t* packetToSend = RF_UPLINK.encode(packetId,dataIn,len);
+      RF_UPLINK_PORT.write(packetToSend,RF_UPLINK.getCodedLen(len));
+      delete[] packetToSend;
     }
     break;
 
