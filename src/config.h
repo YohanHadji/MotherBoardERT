@@ -19,6 +19,9 @@
 #define CAMERA_ROTATOR_PORT Serial5
 #define CAMERA_ROTATOR_BAUD 115200
 
+#define GPS_PORT Serial6
+#define GPS_BAUD 115200
+
 #define BINOCULARS_PORT Serial7
 #define BINOCULARS_BAUD 115200
 

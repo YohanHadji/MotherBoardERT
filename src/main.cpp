@@ -3,6 +3,8 @@
 #include <Adafruit_NeoPixel.h>
 #include "../ERT_RF_Protocol_Interface/PacketDefinition.h"
 #include <rotator.h>
+#include <TinyGPSPlus.h>
+#include <gps.h>
 
 #include "config.h"
 
@@ -19,6 +21,11 @@ void sendRotatorCmd(PacketTrackerCmd cmd);
 Adafruit_NeoPixel ledA(1, NEOPIXEL_A_PIN, NEO_GRB + NEO_KHZ800); // 1 led
 Adafruit_NeoPixel ledB(1, NEOPIXEL_B_PIN, NEO_GRB + NEO_KHZ800); // 1 led
 
+TinyGPSPlus gps;
+av_downlink_t lastPacket;
+PacketTrackerCmd cmdToSend;
+PacketBinocGlobalStatus binocGlobalStatus;
+
 CapsuleStatic RF_UPLINK(handleRF_UPLINK);
 CapsuleStatic RF_AV_DOWNLINK(handleRF_AV_DOWNLINK);
 CapsuleStatic RF_GSE_DOWNLINK(handleRF_GSE_DOWNLINK);
@@ -29,6 +36,9 @@ CapsuleStatic Binoculars(handleBinoculars);
 CapsuleStatic CommandInput(handleCommandInput);
 
 static rotClass rotator;
+
+float yawBinocOffset = 0;
+float pitchBinocOffset = 0;
 
 uint32_t colors[] = {
     0x32A8A0, // Cyan
@@ -69,14 +79,43 @@ void setup() {
   rotator.begin();
 
   position groundPosition;
-  groundPosition.lat = 45.185;
-  groundPosition.lon = 5.727;
-  groundPosition.alt = 200;
+  groundPosition.lat = 39.4826182;
+  groundPosition.lon = -8.3369708;
+  groundPosition.alt = 100.0;
   rotator.setGroundPosition(groundPosition);
 
+  rotator.setNominalPositionRate(1.0);
+  rotator.setNominalPointerRate(20.0);
+
+  GPS_PORT.begin(GPS_BAUD);
+  gpsSetup(GPS_BAUD, 1, 4, 1, 0);
 }
 
 void loop() {
+
+  while (GPS_PORT.available()) {
+    gps.encode(GPS_PORT.read());
+  }
+  if (gps.location.isUpdated()) {
+    if(gps.location.isValid()) {
+      position groundPosition;
+      groundPosition.lat = gps.location.lat();
+      groundPosition.lon = gps.location.lng();
+      // TODO, update for flight!!
+      groundPosition.alt = gps.altitude.meters();
+      // groundPosition.alt = lastPacket.gnss_alt;
+      // Serial.print("Ground position updated: ");
+      // Serial.print(groundPosition.lat,7);
+      // Serial.print(" ");
+      // Serial.print(groundPosition.lon,7);
+      // Serial.print(" ");
+      // Serial.print(groundPosition.alt,1);
+      // Serial.print(" ");
+      // Serial.println(gps.satellites.value());
+      rotator.setGroundPosition(groundPosition);
+    }
+  }
+
   // put your main code here, to run repeatedly:
   while (RF_UPLINK_PORT.available()) {
     RF_UPLINK.decode(RF_UPLINK_PORT.read());
@@ -108,8 +147,8 @@ void loop() {
     rotator.setMode(rotator.computeMode());
 
     if (rotator.getMode() != lastMode) {
-      // Serial.print("Rotator mode : ");
-      // Serial.println(rotator.getMode());
+      Serial.print("Rotator mode : ");
+      Serial.println(rotator.getMode());
       if (lastMode == TARGET_MODE::TARGET_NONE and rotator.getMode() == TARGET_MODE::TARGET_POSITION) {
         position lastPosition = rotator.getPosition();
         rotator.latEstimator.reset(lastPosition.lat);
@@ -125,8 +164,6 @@ void loop() {
     static rotatorCommand lastComputedCommand;
     rotatorCommand computedCommand = rotator.computeCommand();
 
-    PacketTrackerCmd cmdToSend;
-
     if ((lastComputedCommand.azm != computedCommand.azm) or (lastComputedCommand.elv != computedCommand.elv) or (lastComputedCommand.mode != computedCommand.mode)) {
       cmdToSend.azm = computedCommand.azm;
       cmdToSend.elv = computedCommand.elv;
@@ -135,13 +172,15 @@ void loop() {
       switch (rotator.getMode()) {
         case TARGET_MODE::TARGET_NONE:
         case TARGET_MODE::TARGET_POINTER:
-          cmdToSend.timeStamp = 0;
+          cmdToSend.azm = (int((cmdToSend.azm+yawBinocOffset)*100.0)%36000)/100.0;
+          cmdToSend.elv = cmdToSend.elv+pitchBinocOffset;
+          cmdToSend.timeStamp = millis();
           cmdToSend.cutoffFreq = 5;
           cmdToSend.maxTimeWindow = (1000.0/20.0)*5.0;
         break;
         case TARGET_MODE::TARGET_POSITION:
-          cmdToSend.timeStamp = 0; // rotator.getAvTime();
-          cmdToSend.cutoffFreq = 0.1;
+          cmdToSend.timeStamp = lastPacket.timestamp;
+          cmdToSend.cutoffFreq = 0.5;
           cmdToSend.maxTimeWindow = (1000.0/1.0)*5.0;
         break;
         case TARGET_MODE::TARGET_VISION:
@@ -155,10 +194,10 @@ void loop() {
 
 void sendRotatorCmd(PacketTrackerCmd packetToSend) {
 
-  // UI_PORT.print("Sending command to rotator : ");
-  // UI_PORT.print(packetToSend.azm);
-  // UI_PORT.print(" ");
-  // UI_PORT.println(packetToSend.elv);
+  UI_PORT.print("Sending command to rotator : ");
+  UI_PORT.print(packetToSend.azm);
+  UI_PORT.print(" ");
+  UI_PORT.println(packetToSend.elv);
 
   byte* buffer = new byte[packetTrackerCmdSize]; // Allocate memory for the byte array
   memcpy(buffer, &packetToSend, packetTrackerCmdSize); // Copy the struct to the byte array
@@ -182,7 +221,6 @@ void handleRF_AV_DOWNLINK(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
       ledB.fill(ledColor);
       ledB.show();
 
-      av_downlink_t lastPacket;
       memcpy(&lastPacket, dataIn, av_downlink_size);
 
       position lastAvPosition;
@@ -254,7 +292,6 @@ void handleBinoculars(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
   switch(packetId) {
     case CAPSULE_ID::BINOC_GLOBAL_STATUS:
     {
-      PacketBinocGlobalStatus binocGlobalStatus;
       memcpy(&binocGlobalStatus, dataIn, packetBinocGlobalStatusSize);
 
       // UI_PORT.print("Azimuth: ");
@@ -274,6 +311,13 @@ void handleBinoculars(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
     }
     break;
 
+    case CAPSULE_ID::CALIBRATE_TELEMETRY:
+    {
+      yawBinocOffset = cmdToSend.azm-binocGlobalStatus.attitude.azm;
+      pitchBinocOffset = cmdToSend.elv-binocGlobalStatus.attitude.elv;
+    }
+    break;
+
     default:
     break;
   }
@@ -284,7 +328,6 @@ void handleCommandInput(uint8_t packetId, uint8_t *dataIn, uint32_t len) {
   switch(packetId) {
     case CAPSULE_ID::BINOC_GLOBAL_STATUS:
     {
-      PacketBinocGlobalStatus binocGlobalStatus;
       memcpy(&binocGlobalStatus, dataIn, packetBinocGlobalStatusSize);
 
       pointer lastBinocPointer;
